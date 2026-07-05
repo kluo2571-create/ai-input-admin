@@ -7,60 +7,53 @@
     <link rel="stylesheet" href="/css/admin.css">
 </head>
 <body>
-<div class="app">
-    <!-- 侧边栏 -->
-    <aside class="sidebar">
-        <div class="logo">🧠 妙言AI</div>
-        <nav>
-            <a href="/admin/scripts" class="nav-item active">📝 话术示例</a>
-            <span class="nav-item disabled">📋 场景模板</span>
-            <span class="nav-item disabled">👤 用户管理</span>
-        </nav>
-    </aside>
 
-    <!-- 主内容区 -->
-    <main class="main">
-        <div class="topbar">
-            <h1>话术示例管理</h1>
-            <a href="/admin/scripts/new" class="btn btn-primary">＋ 新增示例</a>
-        </div>
+<header class="topnav">
+    <span class="logo">🧠 妙言AI</span>
+    <nav class="nav-links">
+        <a href="/admin/scripts" class="nav-item active">📝 话术示例</a>
+        <span class="nav-item disabled">📋 场景模板</span>
+        <span class="nav-item disabled">👤 用户管理</span>
+    </nav>
+</header>
 
-        <!-- 分类筛选 -->
-        <div class="filter-bar">
-            <button class="filter-chip active" data-cat="">全部</button>
-            <button class="filter-chip" data-cat="love">💕 恋爱</button>
-            <button class="filter-chip" data-cat="sales">💼 销售</button>
-            <button class="filter-chip" data-cat="business">🤝 商务</button>
-            <button class="filter-chip" data-cat="daily">☕ 日常</button>
-        </div>
+<main class="main">
+    <div class="topbar">
+        <h1>话术示例管理</h1>
+        <a href="/admin/scripts/new" class="btn btn-primary">＋ 新增示例</a>
+    </div>
 
-        <!-- 加载提示 -->
-        <div id="loading" class="loading">加载中...</div>
+    <div class="filter-bar">
+        <button class="filter-chip active" data-cat="">全部</button>
+        <button class="filter-chip" data-cat="love">💕 恋爱</button>
+        <button class="filter-chip" data-cat="sales">💼 销售</button>
+        <button class="filter-chip" data-cat="business">🤝 商务</button>
+        <button class="filter-chip" data-cat="daily">☕ 日常</button>
+    </div>
 
-        <!-- 表格 -->
-        <table id="table" class="data-table" style="display:none">
-            <thead>
-                <tr>
-                    <th style="width:150px">标题</th>
-                    <th style="width:80px">分类</th>
-                    <th>情景描述</th>
-                    <th style="width:200px">参考回复</th>
-                    <th style="width:60px">引用</th>
-                    <th style="width:120px">操作</th>
-                </tr>
-            </thead>
-            <tbody id="tbody"></tbody>
-        </table>
+    <div id="loading" class="loading">加载中...</div>
 
-        <div id="empty" class="empty" style="display:none">暂无话术示例，<a href="/admin/scripts/new">去新建</a></div>
-    </main>
-</div>
+    <table id="table" class="data-table" style="display:none">
+        <thead>
+            <tr>
+                <th style="width:150px">标题</th>
+                <th style="width:80px">分类</th>
+                <th>情景描述</th>
+                <th style="width:200px">参考回复</th>
+                <th style="width:60px">引用</th>
+                <th style="width:120px">操作</th>
+            </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+    </table>
+
+    <div id="empty" class="empty" style="display:none">暂无话术示例，<a href="/admin/scripts/new">去新建</a></div>
+</main>
 
 <script>
 const API = '/api/script';
 let currentCategory = '';
 
-// 加载列表
 async function loadList() {
     document.getElementById('loading').style.display = 'block';
     document.getElementById('table').style.display = 'none';
@@ -87,7 +80,6 @@ async function loadList() {
     }
 }
 
-// 渲染表格
 function renderTable(data) {
     const tbody = document.getElementById('tbody');
     const catLabel = {love:'恋爱', sales:'销售', business:'商务', daily:'日常'};
@@ -111,23 +103,14 @@ function renderTable(data) {
 
 async function deleteItem(id) {
     if (!confirm('确定删除这条话术示例吗？')) return;
-    try {
-        await fetch(API + '/' + id, { method: 'DELETE' });
-        loadList();
-    } catch (e) { alert('删除失败'); }
+    try { await fetch(API + '/' + id, { method: 'DELETE' }); loadList(); }
+    catch (e) { alert('删除失败'); }
 }
 
-function editItem(id) {
-    window.location.href = '/admin/scripts/new?id=' + id;
-}
+function editItem(id) { window.location.href = '/admin/scripts/new?id=' + id; }
 
-function esc(s) {
-    const div = document.createElement('div');
-    div.textContent = s;
-    return div.innerHTML;
-}
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
-// 分类筛选
 document.querySelectorAll('.filter-chip').forEach(btn => {
     btn.addEventListener('click', function() {
         document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
