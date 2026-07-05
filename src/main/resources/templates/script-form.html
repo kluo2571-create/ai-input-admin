@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${id} != null ? '编辑话术' : '新建话术'">话术编辑 - 妙言AI管理后台</title>
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <div class="logo">🧠 妙言AI</div>
+        <nav>
+            <a href="/admin/scripts" class="nav-item active">📝 话术示例</a>
+            <span class="nav-item disabled">📋 场景模板</span>
+            <span class="nav-item disabled">👤 用户管理</span>
+        </nav>
+    </aside>
+
+    <main class="main">
+        <div class="topbar">
+            <h1 id="page-title">新建话术示例</h1>
+            <a href="/admin/scripts" class="btn">← 返回列表</a>
+        </div>
+
+        <div id="msg" class="msg" style="display:none"></div>
+
+        <div class="form-card">
+            <!-- AI 生成区域 -->
+            <div class="ai-generate-box">
+                <h3>🤖 AI 智能生成</h3>
+                <p class="text-muted">描述一个场景让 AI 自动生成话术示例，填写后可在下方表单中手动调整</p>
+                <div class="input-row">
+                    <input id="ai-desc" type="text" class="form-input" placeholder="例如：对方生气了但嘴上说没事，该怎么哄" style="flex:1">
+                    <button id="ai-btn" class="btn btn-primary" onclick="aiGenerate()">AI 生成</button>
+                </div>
+                <div id="ai-loading" class="loading" style="display:none">AI 正在生成...</div>
+            </div>
+
+            <!-- 表单 -->
+            <form id="form" onsubmit="saveScript(event)">
+                <input type="hidden" id="item-id" value="">
+
+                <div class="form-row">
+                    <div class="form-group" style="flex:1">
+                        <label>标题 <span class="required">*</span></label>
+                        <input id="title" type="text" class="form-input" placeholder="如「对方生气说晚安」" required maxlength="100">
+                    </div>
+                    <div class="form-group" style="width:160px">
+                        <label>分类 <span class="required">*</span></label>
+                        <select id="category" class="form-input">
+                            <option value="love">恋爱</option>
+                            <option value="sales">销售</option>
+                            <option value="business">商务</option>
+                            <option value="daily">日常</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>情景描述</label>
+                    <textarea id="situation" class="form-input" rows="3" placeholder="描述什么情况下该使用这种回复方式，帮助 AI 理解适用场景"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>对话上下文 <span class="required">*</span></label>
+                    <textarea id="theirMessage" class="form-input code" rows="8" placeholder="粘贴完整的对话记录&#10;格式: TA: xxx&#10;       我: xxx&#10;       TA: xxx" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>参考回复 <span class="required">*</span></label>
+                    <textarea id="aiReply" class="form-input" rows="4" placeholder="这个情况下应该怎么回复？写 1-2 句自然接地气的参考回复" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>标签</label>
+                    <input id="tags" type="text" class="form-input" placeholder="逗号分隔，如：生气,道歉,哄,冷战">
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-lg">💾 保存</button>
+                    <a href="/admin/scripts" class="btn">取消</a>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+
+<script>
+const API = '/api/script';
+const itemId = new URLSearchParams(window.location.search).get('id');
+
+// 编辑模式：加载已有数据
+if (itemId) {
+    document.getElementById('page-title').textContent = '编辑话术示例';
+    document.getElementById('item-id').value = itemId;
+    loadItem(itemId);
+}
+
+async function loadItem(id) {
+    try {
+        const resp = await fetch(API + '/list');
+        const json = await resp.json();
+        const item = (json.data || []).find(i => i.id == id);
+        if (!item) return alert('示例不存在');
+
+        document.getElementById('title').value = item.title || '';
+        document.getElementById('category').value = item.category || 'love';
+        document.getElementById('situation').value = item.situation || '';
+        document.getElementById('theirMessage').value = item.theirMessage || '';
+        document.getElementById('aiReply').value = item.aiReply || '';
+        document.getElementById('tags').value = item.tags || '';
+    } catch (e) { alert('加载失败'); }
+}
+
+async function saveScript(e) {
+    e.preventDefault();
+    const data = {
+        title: document.getElementById('title').value.trim(),
+        category: document.getElementById('category').value,
+        situation: document.getElementById('situation').value.trim(),
+        theirMessage: document.getElementById('theirMessage').value.trim(),
+        aiReply: document.getElementById('aiReply').value.trim(),
+        tags: document.getElementById('tags').value.trim()
+    };
+
+    if (!data.title || !data.theirMessage || !data.aiReply) {
+        showMsg('请填写标题、对话内容和参考回复', 'error');
+        return;
+    }
+
+    const method = itemId ? 'PUT' : 'POST';
+    const url = itemId ? API + '/' + itemId : API + '/create';
+
+    try {
+        const resp = await fetch(url, {
+            method,
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        const json = await resp.json();
+        if (json.code === 200) {
+            showMsg('保存成功！', 'success');
+            setTimeout(() => window.location.href = '/admin/scripts', 800);
+        } else {
+            showMsg(json.msg || '保存失败', 'error');
+        }
+    } catch (e) { showMsg('网络错误', 'error'); }
+}
+
+async function aiGenerate() {
+    const desc = document.getElementById('ai-desc').value.trim();
+    if (!desc) return showMsg('请输入场景描述', 'error');
+
+    document.getElementById('ai-btn').disabled = true;
+    document.getElementById('ai-loading').style.display = 'block';
+
+    try {
+        const resp = await fetch(API + '/enrich?content=' + encodeURIComponent(desc), { method: 'POST' });
+        const json = await resp.json();
+        if (json.code === 200 && json.data) {
+            const d = json.data;
+            document.getElementById('title').value = d.title || '';
+            document.getElementById('category').value = d.category || 'love';
+            document.getElementById('situation').value = d.situation || '';
+            document.getElementById('theirMessage').value = d.theirMessage || '';
+            document.getElementById('aiReply').value = d.aiReply || '';
+            document.getElementById('tags').value = d.tags || '';
+            showMsg('AI 已生成，请在下方检查和调整', 'success');
+        } else {
+            showMsg(json.msg || 'AI 生成失败', 'error');
+        }
+    } catch (e) { showMsg('网络错误', 'error'); }
+    finally {
+        document.getElementById('ai-btn').disabled = false;
+        document.getElementById('ai-loading').style.display = 'none';
+    }
+}
+
+function showMsg(text, type) {
+    const el = document.getElementById('msg');
+    el.textContent = text;
+    el.className = 'msg msg-' + type;
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 3000);
+}
+</script>
+</body>
+</html>
